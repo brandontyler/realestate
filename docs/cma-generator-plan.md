@@ -229,7 +229,7 @@ $filter=StandardStatus eq 'Closed'
 - Closed in last 9 months
 
 **Tier 3 — Widest (if still <3):**
-- Adjacent zip codes
+- Adjacent zip codes / broader North Texas region (coverage area: DFW metro north through Gainesville/Cooke County)
 - ±30% sqft
 - Closed in last 12 months
 
@@ -389,10 +389,10 @@ From adjusted comp prices:
 
 ---
 
-## 8. Open Questions
+## 8. Open Questions (Updated 2026-03-05)
 
-1. What specific MLS does your broker friend use? (Likely NTREIS for North Texas)
-2. Will the Trestle account be under the broker's license or a tech provider account?
-3. What feed type was requested? (Need IDX Plus minimum)
-4. Target demo area — specific cities/zip codes in North Texas?
-5. Do we want active listing analysis too (market absorption rate, competing inventory)?
+1. ~~What specific MLS?~~ **NTREIS** — confirmed on Trestle ✅
+2. Will the Trestle account be under the broker's license or a tech provider account? **TBD**
+3. What feed type was requested? (Need IDX Plus minimum) **TBD — verify on credential arrival**
+4. ~~Target demo area?~~ **All of North Texas, especially north through Gainesville** ✅
+5. Active listing analysis (absorption rate, competing inventory)? **TBD — decide after core CMA works**
