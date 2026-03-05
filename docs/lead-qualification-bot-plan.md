@@ -215,26 +215,38 @@ If lead doesn't qualify as hot:
 └──────────────┘  └────────────────────┘
 ```
 
-### 5.2 Lead Intake Options (Simplest First)
+### 5.2 Lead Intake: Discord-First
 
-**Option A: Email forwarding (easiest to start)**
-- Broker/agents forward leads to a dedicated email address (e.g., leads@[domain])
-- AI parses the email: extracts name, phone, property, message
-- Works with ANY lead source — no integrations needed
-- Broker can literally just forward a text screenshot or email
+**Primary interface: Discord bot (via OpenClaw)**
 
-**Option B: SMS-based (via Twilio or similar)**
-- Dedicated phone number for the brokerage
-- Leads text in, AI responds via SMS
-- Agents can forward leads by texting them to the AI number
-- Two-way conversation happens over SMS
+The broker interacts with the AI directly in a Discord channel. Zero new apps, zero friction.
 
-**Option C: Webhook integrations (later)**
-- Zillow Tech Connect delivers leads via HTTP POST webhook
-- Realtor.com has similar lead delivery
-- CRM integrations (Follow Up Boss, KVCore, etc.)
+**How it works:**
+- Broker pastes a property address → AI analyzes it (Trestle lookup, comps, quick valuation)
+- Broker pastes lead info → AI scores and qualifies it
+- Broker asks follow-up questions → AI responds conversationally
+- AI can generate PDF reports and email them on request
 
-**Recommendation: Start with Option A (email forwarding).** Zero friction for the broker — he already forwards leads. Just change who he forwards them to.
+**Example interactions:**
+```
+Broker: "analyze 4521 Elm Creek Dr, Prosper TX"
+AI: [Quick summary: listing status, price, beds/baths/sqft, DOM, 
+     price/sqft vs area avg, top 3 comps, estimated value range]
+
+Broker: "full CMA"
+AI: [Generates PDF, emails to broker or drops link]
+
+Broker: "got a lead — buyer pre-approved $500K, relocating 
+         from Austin, 60 day timeline, wants Frisco/Prosper"
+AI: [Scores lead 85/100, explains why, cross-references 
+     with available inventory]
+```
+
+**Future channels (via OpenClaw):**
+- SMS integration
+- Email forwarding
+- Other messaging apps
+- The analysis engine stays the same regardless of input channel
 
 ### 5.3 Trestle Integration (Property Enrichment)
 
@@ -280,44 +292,43 @@ in your farm area, motivated relocation
 
 | Component | Choice | Why |
 |-----------|--------|-----|
-| Lead intake (email) | Email parsing (IMAP or forwarding webhook) | Broker already forwards emails |
-| Lead intake (SMS) | Twilio | Industry standard, cheap, two-way SMS |
+| Lead intake | Discord bot (OpenClaw) | Broker already uses Discord; zero friction |
+| Future channels | OpenClaw messaging hooks | SMS, email, other apps later |
 | AI engine | LLM (agent) | Natural conversation + scoring |
 | Property enrichment | Trestle API (same as CMA) | Already building this |
 | Lead storage | SQLite or simple JSON | Start simple |
-| Broker alerts | SMS via Twilio or Discord bot | Meet broker where he is |
+| Broker alerts | Discord (same channel or DM) | Already there |
 | Nurture/follow-up | Scheduled messages | Cron or queue-based |
 
 ---
 
 ## 7. Build Phases
 
-### Phase 1: Lead Intake & Parsing
-- Email forwarding setup (dedicated inbox)
-- AI-powered email/message parser (extract name, phone, email, property, intent from unstructured text)
-- Structured lead object creation
+### Phase 1: Discord Bot + Trestle Property Lookup
+- Discord bot setup (via OpenClaw)
+- Broker pastes address → AI parses it
+- Trestle API client (OAuth2 auth, token caching, Property query)
+- Quick property summary response in Discord
 
-### Phase 2: Scoring Engine
-- Configurable broker buy-box criteria
-- Lead scoring algorithm (0-100)
-- Tier classification (Hot/Warm/Cool/Cold)
-- Property enrichment via Trestle (if property mentioned)
+### Phase 2: Property Analysis & Comps
+- Comp search (reuse tiered strategy from CMA plan)
+- Quick valuation (price/sqft vs area, comp-based range)
+- Formatted Discord response with key stats
 
-### Phase 3: Broker Alerts
-- Hot lead alert delivery (SMS or Discord)
-- Lead summary card generation
-- Reply-to-act (broker can respond to take action)
+### Phase 3: Lead Scoring
+- Broker pastes lead info → AI extracts and scores
+- Configurable buy-box criteria
+- Scored summary response in Discord
 
-### Phase 4: AI Conversation (Qualification)
-- Two-way SMS conversation for warm leads
-- Adaptive question flow (3-5 questions)
-- Real-time re-scoring during conversation
-- Escalation to broker when lead qualifies
+### Phase 4: Report Generation
+- "Full CMA" command → PDF generation
+- Email delivery of PDF to broker
+- Or download link in Discord
 
 ### Phase 5: Nurture & Follow-up
-- Scheduled follow-up messages for cool/warm leads
-- Re-engagement detection
-- Lead lifecycle tracking
+- Lead tracking (who was scored, when, what happened)
+- Follow-up reminders in Discord
+- Re-engagement when broker asks "show me my warm leads"
 
 ---
 
@@ -344,9 +355,9 @@ in your farm area, motivated relocation
 
 ## 10. Open Questions
 
-1. How does your broker friend currently receive leads? (Email? Text? CRM? All of the above?)
-2. What are HIS specific criteria for a "good deal"? (We need to configure his buy box)
-3. Does he primarily work with buyers, sellers, or investors? (Changes scoring weights)
-4. Does he use any CRM currently? (Follow Up Boss, KVCore, Chime, etc.)
-5. Would he prefer alerts via text, email, or something else?
-6. Is your son (the agent) also interested in this, or is this primarily for the broker?
+1. What are the broker's specific criteria for a "good deal"? (Need to configure his buy box)
+2. Does he primarily work with buyers, sellers, or investors? (Changes scoring weights)
+3. Does he use any CRM currently? (Follow Up Boss, KVCore, Chime, etc.)
+4. Would he want PDF reports emailed, or is Discord-only enough to start?
+5. Is your son (the agent) also interested in using this?
+6. Should the bot live in a private Discord channel, or a shared one with his agents?
