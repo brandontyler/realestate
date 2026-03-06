@@ -321,9 +321,12 @@ in your farm area, motivated relocation
 - Scored summary response in Discord
 
 ### Phase 4: Report Generation
-- "Full CMA" command → PDF generation
-- Email delivery of PDF to broker
-- Or download link in Discord
+- "Full CMA" command → PDF generation (weasyprint: HTML template → PDF)
+- Upload PDF to private S3 bucket (`re-agent-reports/`)
+- Generate presigned URL (7-day expiry, configurable)
+- Post presigned link in Discord with summary
+- No auth needed on recipient's end — click and download
+- Requires: S3 bucket (private), IAM with `s3:PutObject` + `s3:GetObject`
 
 ### Phase 5: Nurture & Follow-up
 - Lead tracking (who was scored, when, what happened)
@@ -353,11 +356,37 @@ in your farm area, motivated relocation
 
 ---
 
-## 10. Open Questions
+## 10. Updated Research & Industry Stats (2026-03-06)
+
+### Speed-to-Lead Data (Critical for Pitch)
+- **81.2% of companies** that respond in more than 1 hour report losing leads (Blazeo 2026 Speed-to-Lead Benchmark)
+- Only **46.6%** of businesses responding within 15 minutes report lead loss — slow responders are **74% more likely** to have a leaky funnel
+- **35.4% of business leaders** say responding within 5 minutes is essential, yet **38% of those fail** to meet their own standard
+- **60% of prospects** will move to a competitor if no response within 24 hours (CallRail/Yardi)
+- **62% of renters** search after 5 PM — when most offices are closed (applies to buyer leads too)
+
+### AI Lead Qualification Stats
+- AI-led customer engagement tools showing **68% reduction in response time** (Vestian CEO, Moneycontrol)
+- **53% jump in qualified leads** with AI tools
+- **15-25% improvement** in lead-to-conversion ratios
+- Housing lead-to-buy cycle hit record low of **26 days in 2025** (down from 32 in 2024)
+- **65% of real estate agencies** in 2026 using AI-powered tools for lead management (industry reports)
+- One mid-size US brokerage with AI chatbot: **40% reduction in response time**, **20% increase in lead-to-client conversions**
+
+### What This Means for Our Bot
+The data overwhelmingly supports the "Lead Filter" approach (idea #1 from section 8). The broker doesn't need to respond to every lead — he needs to respond to the RIGHT leads FAST. Our bot sitting in Discord can:
+1. Score leads instantly (sub-60-second qualification)
+2. Alert the broker only for hot leads (80+ score)
+3. Provide property context via Trestle enrichment
+4. Work 24/7 including after 5 PM when 62% of searches happen
+
+The ROI math: if the bot helps catch even 1 extra deal/month that would've been ignored = $9-11K in recovered commission. The bot costs essentially nothing to run (Trestle API + compute).
+
+## 11. Open Questions
 
 1. What are the broker's specific criteria for a "good deal"? (Need to configure his buy box)
 2. Does he primarily work with buyers, sellers, or investors? (Changes scoring weights)
 3. Does he use any CRM currently? (Follow Up Boss, KVCore, Chime, etc.)
-4. Would he want PDF reports emailed, or is Discord-only enough to start?
+4. ✅ PDF delivery: S3 presigned URLs posted in Discord (Discord file size limits already hit)
 5. Is your son (the agent) also interested in using this?
 6. Should the bot live in a private Discord channel, or a shared one with his agents?

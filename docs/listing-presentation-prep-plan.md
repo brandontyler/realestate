@@ -249,3 +249,36 @@ For more accurate pricing, apply standard adjustments:
 2. Should comp selection be adjustable via follow-up commands? (e.g., "expand to 12 months", "include 4 bed")
 3. Phase 1 output: clean text summary vs full Discord embed with formatting?
 4. How to handle properties not yet in MLS? (agent is prepping for a new listing that hasn't been entered)
+
+## Updated Research (2026-03-06)
+
+### What Sellers Actually Want in a Listing Presentation
+Based on Flipsnack's 2026 guide and industry research, a strong listing presentation answers three questions:
+1. **Why should I hire you?** — Track record, proof, testimonials
+2. **What will you do?** — Marketing plan with clear timeline, prep plan (staging, photos, video)
+3. **How will you price and sell my property?** — CMA with reasoning, not just a number
+
+Key sections sellers care about (in order of importance):
+- **Local market analysis + CMA** — Show WHY you picked each comp, what you adjusted for, how recent the data is. This is where trust is earned.
+- **Recommended list price + pricing strategy** — Not just a number but a plan: what if seller wants higher? What if early interest is low?
+- **Marketing plan with week-one timeline** — First week matters most (highest attention). MLS timing, distribution, open house plans, digital marketing.
+- **Prep plan** — Staging guidance, prep checklist, media plan (professional photography, video, floor plans, virtual tours)
+- **Communication plan** — How often updates come, what they include. Reduces stress.
+- **Fees and disclosures** — Be direct. Prevent last-minute friction.
+- **Seller net sheet** — Clear assumptions (fees, taxes, closing costs)
+
+### Industry Trends Validating This Idea
+- Flipsnack building MLS-to-brochure AI tools via RESO Web API — proves demand for automated MLS data → presentation pipeline
+- WAV Group: ListTrac's Seller Report (aggregates listing view data from 100K+ property search sites) is being called "the secret weapon for every listing presentation" — shows agents need data-backed presentations
+- NAR: 90% of sellers use an agent; agent-listed homes sell for median $405K vs $310K FSBO — pricing strategy is the key differentiator
+- 1 in 5 TX sellers had to drop price in 2025 — agents who nail pricing from day one have a massive advantage
+- Sellers now expect mobile-friendly, shareable presentations they can review later and share with spouse/partner
+
+### North Texas Market Context for Presentations
+- Avg DOM in North Texas: ~58 days
+- Sellers receiving avg 93.7% of original list price
+- Inventory rising (shifting toward buyer's market in some areas)
+- These stats should auto-populate in the generated presentation as market context
+
+### How Our Tool Differs from Flipsnack/Others
+Flipsnack and similar tools are about **design and formatting** — making pretty brochures. Our tool is about **data and analysis** — pulling live MLS data, running comps, calculating market metrics, and generating pricing recommendations. The output could feed INTO a Flipsnack-style presentation, but the intelligence layer is what we're building. No one else is doing: Discord command → live Trestle query → comp analysis → pricing recommendation → talking points, all in seconds.

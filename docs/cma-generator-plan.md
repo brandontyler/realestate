@@ -389,7 +389,28 @@ From adjusted comp prices:
 
 ---
 
-## 8. Open Questions (Updated 2026-03-05)
+## 8. North Texas Market Context (Updated 2026-03-06)
+
+Key stats to calibrate CMA defaults:
+- Texas median sale price: ~$339K (up 6.5% YoY per Houzeo)
+- Zillow avg TX home value: $294,807 (down 2.4% YoY)
+- Avg days on market in North Texas: ~58 days (up slightly)
+- Sellers receiving avg 93.7% of original list price
+- Statewide DOM essentially flat at ~117 days for new construction
+- Inventory rising — 9 months of supply statewide (shifting toward buyer's market)
+- 1 in 5 TX sellers had to drop price in 2025 (Realtor.com)
+
+These numbers should inform default adjustment values and market narrative generation.
+
+## 9. Industry Validation (2026 Research)
+
+- 65% of real estate agencies now using AI-powered tools for lead management and engagement (Creole Studios / industry reports)
+- AI valuation models reducing pricing errors vs traditional appraisals
+- AI lease abstraction tools hitting 99%+ accuracy (V7 Labs / Forbes)
+- Flipsnack and others building MLS-to-brochure AI tools via RESO Web API — validates demand for automated MLS data consumption
+- WAV Group: brokerages organizing tech by product category (CRM, CMA, website) are missing the strategic picture — need lifecycle-oriented tools
+
+## 10. Open Questions (Updated 2026-03-06)
 
 1. ~~What specific MLS?~~ **NTREIS** — confirmed on Trestle ✅
 2. Will the Trestle account be under the broker's license or a tech provider account? **TBD**
