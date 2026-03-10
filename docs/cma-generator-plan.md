@@ -410,10 +410,225 @@ These numbers should inform default adjustment values and market narrative gener
 - Flipsnack and others building MLS-to-brochure AI tools via RESO Web API — validates demand for automated MLS data consumption
 - WAV Group: brokerages organizing tech by product category (CRM, CMA, website) are missing the strategic picture — need lifecycle-oriented tools
 
-## 10. Open Questions (Updated 2026-03-06)
+## 10. Open Questions (Updated 2026-03-10)
 
 1. ~~What specific MLS?~~ **NTREIS** — confirmed on Trestle ✅
-2. Will the Trestle account be under the broker's license or a tech provider account? **TBD**
-3. What feed type was requested? (Need IDX Plus minimum) **TBD — verify on credential arrival**
+2. ~~Will the Trestle account be under the broker's license or a tech provider account?~~ **Emailed broker to ask about direct NTREIS credentials** ✅
+3. ~~What feed type was requested?~~ **IDX Plus selected on Trestle, but not activated yet ($500 setup). Waiting on broker response re: direct NTREIS access** ✅
 4. ~~Target demo area?~~ **All of North Texas, especially north through Gainesville** ✅
 5. Active listing analysis (absorption rate, competing inventory)? **TBD — decide after core CMA works**
+
+## 11. Bridge Interactive API — Dev/Test Environment (Added 2026-03-10)
+
+### Why Bridge?
+Building against free Austin (ACTRIS) data while waiting for NTREIS access. Both use RESO Data Dictionary, so code is portable.
+
+### Key Differences: Bridge vs Trestle
+
+| Aspect | Trestle | Bridge (ACTRIS ref) |
+|--------|---------|---------------------|
+| Base URL | `https://api.cotality.com/trestle/odata/` | `https://api.bridgedataoutput.com/api/v2/OData/actris_ref/` |
+| Auth | OAuth2 client credentials → bearer token | Static server token → bearer token |
+| Token endpoint | `POST {base}/oidc/connect/token` | N/A — token is static |
+| Resource name | `Property` | `Property` (singular for abor_ref/actris_ref) |
+| Pagination default | 10 per page, max 1000 via `$top` | 10 per page, max 200 via `$top` |
+| `$top` behavior | Page size | Page size (v2) or total collection size (v3) |
+| Geo search | Use `Latitude`/`Longitude` fields | `geo.distance(Coordinates, POINT(lng lat))` supported |
+| Dataset in URL | No (single dataset per credential) | Yes — dataset code in URL path (e.g., `actris_ref`) |
+| Enum filtering | `StandardStatus eq 'Closed'` | Same |
+| Media | `$expand=Media(...)` or separate Media resource | `$expand=Media(...)` or separate Media resource |
+
+### Bridge API Endpoint Patterns (ACTRIS Reference Server)
+
+```
+# Metadata
+GET /api/v2/OData/actris_ref/$metadata
+
+# DataSystem info
+GET /api/v2/OData/DataSystem('actris_ref')
+
+# Property queries (same OData as Trestle, just different base URL)
+GET /api/v2/OData/actris_ref/Property?$filter=...&$select=...&$top=...
+
+# Single property by key
+GET /api/v2/OData/actris_ref/Property('listing_key_here')
+
+# Member queries
+GET /api/v2/OData/actris_ref/Member?$filter=...
+
+# Geo search (radius in miles from a point)
+GET /api/v2/OData/actris_ref/Property?$filter=geo.distance(Coordinates, POINT(-97.62669 30.430726)) le 10&$top=10
+```
+
+### Auth Header
+```
+Authorization: Bearer <BRIDGE_API_TOKEN>
+```
+No OAuth2 flow needed — the server token from the Bridge dashboard is used directly as a bearer token.
+
+### Provider-Agnostic Architecture
+
+The API client must abstract these differences:
+1. **Base URL** — env var `MLS_API_URL`
+2. **Auth method** — Trestle: OAuth2 client credentials; Bridge: static bearer token
+3. **Dataset path** — Trestle: none; Bridge: dataset code in URL
+4. **Pagination limits** — Trestle: max 1000; Bridge v2: max 200
+
+All OData query syntax ($filter, $select, $orderby, $expand, $count) is identical.
+
+### ACTRIS Reference Server Notes
+- Contains previous year's Austin MLS data
+- Free for development/testing
+- RESO Web API certified
+- Same RESO Data Dictionary fields as NTREIS
+- Includes sold/closed listings (critical for CMA development)
+- Supports geo.distance() for radius searches
+- Dataset code: likely `actris_ref` (confirmed from RESO examples using `abor_ref` — may be either)
+
+## 12. Gaps & Corrections Identified (2026-03-10 Deep Review)
+
+### 12.1 Rate Limiting — Must Be Baked Into Everything
+
+This is non-negotiable. Every API call must go through a rate limiter.
+
+**Trestle rate limits:**
+- 7,200 queries/hour (= 120/min sustained), 180/min burst
+- 18,000 media URL requests/hour, 480/min burst
+- Response headers: `Minute-Quota-Limit`, `Hour-Quota-Limit`, `Hour-Quota-ResetTime`
+- 429 = quota exceeded; check `Hour-Quota-Available` to distinguish hourly vs per-minute limit
+
+**Bridge rate limits:**
+- Hourly limit varies by account/dataset (check response headers on first call)
+- Burst limit: 1/15 of hourly limit per minute
+- Response headers: `Burst-RateLimit-Limit`, `Burst-RateLimit-Remaining`, `Burst-RateLimit-Reset`
+- Also has hourly headers (standard)
+
+**Rate limiter requirements for our API client:**
+1. Token bucket or sliding window — configurable per provider
+2. Read rate limit headers from EVERY response and adjust dynamically
+3. On 429: exponential backoff with jitter (start 1s, max 60s, max 3 retries)
+4. Pre-request check: if remaining quota is low, sleep until reset
+5. Log every API call with timestamp, endpoint, response code, quota remaining
+6. Per-CMA budget: a single CMA should use ~4-8 API calls max:
+   - 1 call: subject property lookup
+   - 1-3 calls: comp search (tiered, stop when enough found)
+   - 0-1 calls: media/photos (use $expand to inline, avoid separate calls)
+   - 1 call: active competition snapshot
+   - 1 call: pending/under contract snapshot
+   At 8 calls per CMA, we can safely run ~900 CMAs/hour on Trestle, ~15/min burst
+7. Never paginate unnecessarily — use tight $filter + $select to minimize result sets
+8. Cache subject property lookups (same property may be queried multiple times during refinement)
+
+### 12.2 Missing from CMA: Active Listings & Pending Sales
+
+The current plan only looks at sold comps. A real CMA also needs:
+
+**Active competition** — What's currently on the market that the subject will compete against?
+- Query: `StandardStatus eq 'Active'` with same filters as comp search
+- Shows the seller: "Here's what buyers can choose from right now"
+- If 15 similar homes are active, pricing needs to be aggressive
+- If only 2 are active, seller has leverage
+
+**Pending/under contract** — Properties that went under contract but haven't closed yet
+- Query: `StandardStatus in ('Pending', 'ActiveUnderContract')`
+- Most current market signal — shows what buyers are willing to pay RIGHT NOW
+- We don't know the contract price, but we know the list price and DOM
+- A property that went pending in 3 days at full ask = strong market signal
+
+**Absorption rate** — How fast is inventory moving?
+- Formula: closed sales in last 6 months ÷ 6 = monthly absorption
+- Current active listings ÷ monthly absorption = months of supply
+- <3 months = seller's market, 3-6 = balanced, >6 = buyer's market
+- This single number tells the broker more about pricing strategy than anything else
+
+### 12.3 Missing: Texas Is a Non-Disclosure State
+
+Critical and previously overlooked. Texas does NOT require sale prices in public records.
+- County assessor records won't show sale prices
+- The MLS is the ONLY reliable source of sold data in Texas
+- This makes our MLS connection even more valuable
+- Can't cross-reference with public records easily
+- Tax assessed values in Texas lag significantly behind market values
+- Our CMA report should note this: "Sale price data sourced from MLS; Texas is a non-disclosure state"
+
+### 12.4 Missing: Seller Concessions Distort Close Price
+
+`ClosePrice` may not reflect true transaction value. If seller paid $10K toward buyer's closing costs, the recorded close price is inflated.
+- RESO fields to check: `Concessions`, `ConcessionsAmount`, `ConcessionsComments`
+- Not all MLSs populate these consistently
+- Adjustment engine should flag comps where concession data is available and adjust
+- At minimum, note in report when concession data is unavailable
+- Fannie Mae caps: 3% for >90% LTV, 6% for 75-90% LTV, 9% for ≤75% LTV
+
+### 12.5 Missing: Distressed Sales Filtering
+
+Foreclosures and short sales sell below market value — shouldn't be weighted equally.
+- RESO fields: `SpecialListingConditions` (may contain 'ShortSale', 'REO', 'Foreclosure', 'BankOwned')
+- Also scan `PublicRemarks` for keywords: "foreclosure", "short sale", "bank owned", "REO", "as-is"
+- Either exclude distressed sales or flag them with reduced weight in scoring
+- In the report, clearly mark any distressed sale comps
+
+### 12.6 Adjustment Quality Improvements
+
+Our hardcoded adjustment values ($5K-$15K per bedroom) are guesses. Real agents derive these from paired sales analysis.
+
+Better approach:
+- Calculate local $/sqft from the comp set itself (not hardcoded)
+- Derive bedroom/bathroom adjustments from comp data where possible
+- Make ALL adjustment values configurable per market/zip code
+- Let the broker override any adjustment value
+- Flag when total adjustments exceed 25% of comp's sale price (Fannie Mae: heavy adjustments = unreliable comp)
+- Weight reconciliation, not simple averaging — comps needing fewer adjustments get more weight
+
+### 12.7 Days on Market Context
+
+DOM tells a story that should influence comp weighting:
+- DOM < 7: hot property, likely multiple offers, close price may be ABOVE true market
+- DOM 7-30: healthy market, close price is reliable
+- DOM 30-90: normal to slow, close price is reliable
+- DOM > 90: stale listing, likely price reductions, close price may be BELOW market
+- Weight comps with "normal" DOM (7-60 days) higher in scoring
+
+### 12.8 Subject Property May Not Be in MLS
+
+Broker might want a CMA for a property NOT currently listed (owner considering selling).
+
+Fallback approach:
+- Accept manual input: address, beds, baths, sqft, year built, lot size, features
+- Use address geocoding for lat/long (for distance-based comp search)
+- Run same comp search and analysis
+- Note in report: "Subject property details provided by agent, not verified against MLS"
+
+### 12.9 Comp Ranking Algorithm Improvements
+
+Based on real-world CMA best practices:
+- **Same subdivision weight: increase from 15% to 20-25%** — same subdivision = same school zone, HOA, neighborhood reputation. #1 thing agents look at.
+- **Add PropertySubType matching** — townhouse comp for single-family subject is weak. Same subtype gets bonus.
+- **Add age band matching** — 2020 build vs 1970 build are fundamentally different products.
+- **Penalize comps with >25% total adjustments** — per Fannie Mae, these are unreliable.
+- **Reconciliation over averaging** — final price estimate should weight comps needing fewest adjustments most heavily.
+
+### 12.10 Report Must Include Confidence Indicators
+
+Broker needs to know how reliable the CMA is:
+- Number of comps found vs target (3-6)
+- Average adjustment magnitude (lower = more reliable)
+- Comp recency (all within 3 months = high confidence, 6-12 months = lower)
+- Price clustering (tight cluster = high confidence, wide spread = low)
+- Market conditions (months of supply, trending up/down/flat)
+- Data quality flags (missing lat/long, missing concession data, distressed sales in set, etc.)
+- Search tier used (Tier 1 = high confidence, Tier 3 = lower)
+
+### 12.11 Updated API Call Budget Per CMA
+
+| Step | Calls | Notes |
+|------|-------|-------|
+| Subject property lookup | 1 | By address or ListingKey, with $expand=Media for photo |
+| Sold comps search (Tier 1) | 1 | $filter by zip/subdivision, status, sqft, beds, date |
+| Sold comps search (Tier 2, if needed) | 0-1 | Wider criteria if Tier 1 < 3 comps |
+| Sold comps search (Tier 3, if needed) | 0-1 | Widest criteria, last resort |
+| Active competition | 1 | Same area, similar specs, StandardStatus eq 'Active' |
+| Pending/under contract | 1 | Same area, StandardStatus in ('Pending','ActiveUnderContract') |
+| **Total** | **4-6** | Well within rate limits |
+
+All queries use `$select` to return only needed fields, `$top` to cap results, and `$expand=Media($select=MediaURL;$top=1;$orderby=Order)` to inline primary photo without separate media calls.

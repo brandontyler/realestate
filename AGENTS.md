@@ -4,6 +4,26 @@
 When the user says "look at ss" or references a screenshot, read the image from:
 `/mnt/c/Users/tylerbtt/AppData/Local/Temp/ss.png`
 
+## MLS Data Access
+
+### Provider-Agnostic Design
+All MLS code MUST be provider-agnostic. Use env vars for base URL, auth method, dataset, and credentials. RESO Data Dictionary fields are the same across providers — only auth and endpoint URLs differ.
+
+### Bridge Interactive (Active — Dev/Test)
+- Auth: Server token as query param `access_token` — NO OAuth, NO Bearer header
+- Endpoint: `GET {BRIDGE_API_URL}/OData/{dataset}/{Resource}?access_token={BRIDGE_API_TOKEN}&$top=N`
+- Datasets: `actris_ref` (real Austin MLS, 52k+), `test` (synthetic, 10k)
+- Use `actris_ref` for development (NOT `actris` — that 404s)
+
+### Trestle / NTREIS (Pending — Production)
+- Auth: OAuth2 client_credentials → Bearer token header
+- Token endpoint: `{base}/oidc/connect/token`
+- OData endpoint: `{base}/odata/{Resource}`
+- Waiting on broker for NTREIS IDX Vendor Authorization Form
+
+### Swapping Providers
+When NTREIS credentials arrive, only env vars change — no code changes needed if the MLS client is built correctly.
+
 ## Issue Tracking (Beads)
 
 Uses **br** (beads-rust) — git-native, AI-friendly task tracker. Non-invasive, never runs git commands.

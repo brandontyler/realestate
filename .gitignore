@@ -1,0 +1,15 @@
+
+# Agent memory (personal, don't commit)
+.kiro/memory.md
+
+# Environment secrets
+.env
+.env.*
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.coverage
+htmlcov/
