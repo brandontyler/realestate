@@ -13,7 +13,8 @@
     "file://.kiro/memory.md",
     "skill://~/.kiro/skills/dev-browser/SKILL.md",
     "skill://~/.kiro/skills/mls/SKILL.md",
-    "skill://~/.kiro/skills/pdf-report/SKILL.md"
+    "skill://~/.kiro/skills/pdf-report/SKILL.md",
+    "skill://~/.kiro/skills/cma/SKILL.md"
   ],
   "hooks": {
     "preToolUse": [
