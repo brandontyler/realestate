@@ -326,6 +326,29 @@ class TestBridgeClient:
         assert c.rate_limiter.burst.limit == 334
         assert c.rate_limiter.total_requests == 1
 
+    @responses.activate
+    def test_no_decrement_on_retryable_error(self):
+        """429/504 should not count against our local quota tracker."""
+        responses.add(
+            responses.GET,
+            f"{BRIDGE_BASE}/OData/{BRIDGE_DATASET}/Property",
+            json={"error": "rate limited"},
+            status=429,
+            headers=BRIDGE_RATE_HEADERS,
+        )
+        responses.add(
+            responses.GET,
+            f"{BRIDGE_BASE}/OData/{BRIDGE_DATASET}/Property",
+            json=SAMPLE_ODATA_RESPONSE,
+            status=200,
+            headers=BRIDGE_RATE_HEADERS,
+        )
+        c = make_bridge_client()
+        c.rate_limiter.backoff_base = 0.001
+        c.query("Property", top=1)
+        # Only 1 decrement (the success), not 2
+        assert c.rate_limiter.total_requests == 1
+
     def test_init_from_env(self):
         env = {
             "BRIDGE_API_URL": BRIDGE_BASE,

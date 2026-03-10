@@ -32,6 +32,11 @@ class RateLimiter:
     burst: QuotaBucket = field(default_factory=QuotaBucket)
     total_requests: int = 0
 
+    # Burst window tracking for providers that don't send burst reset headers
+    _burst_window_start: float = 0.0
+    _burst_window_seconds: float = 60.0
+    _burst_window_used: int = 0
+
     max_retries: int = 3
     backoff_base: float = 1.0
     backoff_max: float = 60.0
@@ -63,7 +68,6 @@ class RateLimiter:
         if "Hour-Quota-Limit" in headers:
             new_limit = int(float(headers["Hour-Quota-Limit"]))
             if self.hourly.limit == 0:
-                # First response — seed remaining
                 self.hourly.remaining = new_limit
             self.hourly.limit = new_limit
         if "Minute-Quota-Limit" in headers:
@@ -73,7 +77,6 @@ class RateLimiter:
             self.burst.limit = new_limit
         if "Hour-Quota-ResetTime" in headers:
             new_reset = int(headers["Hour-Quota-ResetTime"]) / 1000.0
-            # If reset time changed, the quota window rolled over — refill
             if new_reset != self.hourly.reset_time and self.hourly.reset_time > 0:
                 self.hourly.remaining = self.hourly.limit
             self.hourly.reset_time = new_reset
@@ -82,17 +85,30 @@ class RateLimiter:
         """Sleep if we're close to hitting either quota."""
         now = time.time()
 
+        # For providers without burst reset headers (Trestle), track our own
+        # 60-second sliding window and refill when the window expires.
+        if self._burst_window_start > 0 and now >= self._burst_window_start + self._burst_window_seconds:
+            self.burst.remaining = self.burst.limit
+            self._burst_window_used = 0
+            self._burst_window_start = now
+
         # Check burst (per-minute) first — tighter window
         if self.burst.limit > 0 and self.burst.remaining <= 1:
-            wait = max(0, self.burst.reset_time - now)
+            if self.burst.reset_time > 0:
+                # Provider gave us a reset time (Bridge)
+                wait = max(0, self.burst.reset_time - now)
+            else:
+                # No reset header (Trestle) — wait until our window expires
+                wait = max(0, (self._burst_window_start + self._burst_window_seconds) - now)
             if wait > 0:
                 logger.warning(
                     "Burst quota exhausted (%d/%d), sleeping %.1fs until reset",
                     self.burst.remaining, self.burst.limit, wait,
                 )
                 time.sleep(wait)
-                # After sleeping past reset, refill burst
-                self.burst.remaining = self.burst.limit
+            self.burst.remaining = self.burst.limit
+            self._burst_window_used = 0
+            self._burst_window_start = time.time()
 
         # Check hourly quota
         if self.hourly.limit > 0 and self.hourly.remaining <= 1:
@@ -112,6 +128,10 @@ class RateLimiter:
             self.burst.remaining -= 1
         if self.hourly.remaining > 0:
             self.hourly.remaining -= 1
+        # Track burst window
+        self._burst_window_used += 1
+        if self._burst_window_start == 0:
+            self._burst_window_start = time.time()
 
     def backoff_sleep(self, attempt: int) -> None:
         """Exponential backoff with jitter."""

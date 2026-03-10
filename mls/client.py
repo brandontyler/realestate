@@ -11,6 +11,7 @@ is identical across providers.
 
 import logging
 import os
+import re
 import time
 from abc import ABC, abstractmethod
 from typing import Any
@@ -23,6 +24,9 @@ logger = logging.getLogger(__name__)
 
 # HTTP status codes that are safe to retry
 _RETRYABLE_STATUS = {429, 504}
+
+# Default request timeout (connect, read) in seconds
+_DEFAULT_TIMEOUT = (10, 30)
 
 
 class MLSClient(ABC):
@@ -121,7 +125,7 @@ class MLSClient(ABC):
 
         self.rate_limiter.wait_if_needed()
         logger.info("MLS metadata request: %s", _safe_log_url(full_url))
-        resp = self.session.get(full_url, headers=headers)
+        resp = self.session.get(full_url, headers=headers, timeout=_DEFAULT_TIMEOUT)
         self._update_rate_limits(resp)
         self.rate_limiter.decrement()
         resp.raise_for_status()
@@ -144,10 +148,9 @@ class MLSClient(ABC):
                 self.rate_limiter.total_requests + 1,
                 _safe_log_url(full_url),
             )
-            resp = self.session.get(full_url, headers=headers)
+            resp = self.session.get(full_url, headers=headers, timeout=_DEFAULT_TIMEOUT)
 
             self._update_rate_limits(resp)
-            self.rate_limiter.decrement()
 
             logger.info(
                 "MLS response: %d | quota: hourly=%d/%d burst=%d/%d",
@@ -159,9 +162,12 @@ class MLSClient(ABC):
             )
 
             if resp.status_code == 200:
+                self.rate_limiter.decrement()
                 return resp.json()
 
             if resp.status_code in _RETRYABLE_STATUS:
+                # Don't decrement on retryable errors — the server rejected
+                # the request, so it shouldn't count against our local quota.
                 if attempt < self.rate_limiter.max_retries:
                     self.rate_limiter.backoff_sleep(attempt)
                     continue
@@ -253,6 +259,7 @@ class TrestleClient(MLSClient):
                 "scope": "api",
             },
             headers={"Content-Type": "application/x-www-form-urlencoded"},
+            timeout=_DEFAULT_TIMEOUT,
         )
         resp.raise_for_status()
         data = resp.json()
@@ -308,5 +315,4 @@ def _build_odata_url(base_url: str, params: dict) -> str:
 
 def _safe_log_url(url: str) -> str:
     """Redact access_token from URLs before logging."""
-    import re
     return re.sub(r"access_token=[^&]+", "access_token=***", url)
