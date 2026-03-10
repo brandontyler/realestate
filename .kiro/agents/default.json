@@ -12,7 +12,8 @@
     "file://AGENTS.md",
     "file://.kiro/memory.md",
     "skill://~/.kiro/skills/dev-browser/SKILL.md",
-    "skill://~/.kiro/skills/mls/SKILL.md"
+    "skill://~/.kiro/skills/mls/SKILL.md",
+    "skill://~/.kiro/skills/pdf-report/SKILL.md"
   ],
   "hooks": {
     "preToolUse": [
