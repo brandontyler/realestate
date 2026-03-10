@@ -1,8 +1,8 @@
 # AI CMA Generator — Research & Build Plan
 
 **Bead:** bd-2mb.1
-**Status:** Research complete, awaiting Trestle credentials
-**Last updated:** 2026-03-05
+**Status:** Research complete. Phase 1 (MLS client) built and tested.
+**Last updated:** 2026-03-10
 
 ---
 
@@ -291,11 +291,19 @@ From adjusted comp prices:
 
 ## 4. Build Phases
 
-### Phase 1: Trestle API Client
-- OAuth2 auth with token caching
-- OData query builder for Property endpoint
-- Media URL fetching
-- Error handling (429 rate limit, 504 timeout, retry logic)
+### Phase 1: MLS API Client ✅ COMPLETE (2026-03-10)
+- Provider-agnostic RESO Web API client (`mls/client.py`)
+- Bridge: server token as `access_token` query param
+- Trestle: OAuth2 client_credentials → Bearer header, 8hr token cache
+- Rate limiter reads live quota headers from both providers
+- Trestle burst tracked with 60s sliding window (no burst reset header)
+- Only decrements quota on 200 success (not 429/504)
+- Exponential backoff with jitter on retryable errors
+- 10s connect / 30s read timeout on all requests
+- OData URL builder preserves `$` chars (Bridge rejects `%24`)
+- `create_client()` factory reads `MLS_PROVIDER` env var
+- 66 unit tests, 100% coverage
+- Swap to Trestle: change env vars only, no code changes
 
 ### Phase 2: Comp Selection Engine
 - Subject property lookup by address
@@ -326,53 +334,49 @@ From adjusted comp prices:
 
 | Component | Choice | Why |
 |-----------|--------|-----|
-| Language | Python | Fast prototyping, matches Trestle docs |
-| HTTP/Auth | `requests` + `oauthlib` | Trestle docs use these exactly |
+| Language | Python 3.12 | Fast prototyping, matches Trestle docs |
+| MLS Client | `requests` + custom OData URL builder | `oauthlib` not needed — manual OAuth2 is simpler. Custom URL builder required because `requests` encodes `$` as `%24` which Bridge rejects |
+| Testing | `pytest` + `responses` + `pytest-cov` | 100% coverage, all HTTP mocked |
 | Data | `pandas` | Comp analysis, adjustments |
 | Distance | `haversine` lib | Lat/long distance |
 | Reports | `jinja2` + `weasyprint` | HTML → PDF |
 | AI narrative | LLM (agent) | Written analysis |
-| Config | `.env` | Credentials, market adjustments |
+| Config | `.env` + `python-dotenv` | Credentials, market adjustments |
 
 ---
 
-## 6. First Steps When Credentials Arrive
+## 6. When NTREIS Credentials Arrive
 
-1. **Test auth:**
+The MLS client is already built and tested against Bridge/ACTRIS. To switch to Trestle/NTREIS:
+
+1. **Update `.env`:**
    ```
-   POST https://api.cotality.com/trestle/oidc/connect/token
+   MLS_PROVIDER=trestle
+   TRESTLE_API_URL=https://api.cotality.com/trestle
+   TRESTLE_CLIENT_ID=<from trestle dashboard>
+   TRESTLE_CLIENT_SECRET=<from trestle dashboard>
    ```
 
-2. **Check feed type — can you see sold data?**
-   ```
-   GET /trestle/odata/Property?$filter=StandardStatus eq 'Closed'
-     &$select=ListingKey,ClosePrice,CloseDate&$top=5
+2. **Verify auth + sold data access:**
+   ```python
+   from mls.client import create_client
+   client = create_client()  # reads MLS_PROVIDER=trestle
+   result = client.query("Property", filter="StandardStatus eq 'Closed'",
+                         select=["ListingKey","ClosePrice","CloseDate"], top=5)
    ```
    If empty/404 → need IDX Plus or higher feed.
 
-3. **Check what North Texas data is available:**
-   ```
-   GET /trestle/odata/Property?$filter=PostalCode eq '75024'
-     &$count=true&$top=1
-   ```
-
-4. **Read metadata to confirm available fields:**
-   ```
-   GET /trestle/odata/$metadata
+3. **Check North Texas data + field availability:**
+   ```python
+   result = client.query("Property", filter="PostalCode eq '75024'", top=1, count=True)
+   meta = client.get_metadata()  # XML — check for ClosePrice, DaysOnMarket
    ```
 
-5. **Pull a sample closed listing with all CMA fields:**
-   ```
-   GET /trestle/odata/Property?$filter=StandardStatus eq 'Closed'
-     and PostalCode eq '75024'
-     &$select=ListingKey,UnparsedAddress,ClosePrice,CloseDate,ListPrice,
-       BedroomsTotal,BathroomsTotalInteger,LivingArea,LotSizeSquareFeet,
-       YearBuilt,GarageSpaces,PoolPrivateYN,PropertySubType,
-       Latitude,Longitude,SubdivisionName,DaysOnMarket,
-       TaxAnnualAmount,TaxAssessedValue,PublicRemarks
-     &$expand=Media($select=MediaURL;$top=1;$orderby=Order)
-     &$top=3&$orderby=CloseDate desc
-   ```
+4. **Note Trestle differences from Bridge:**
+   - `$expand=Media($select=MediaURL;$top=1;$orderby=Order)` works on Trestle (not Bridge)
+   - `ClosePrice` and `DaysOnMarket` should exist on Trestle (missing on Bridge actris_ref)
+   - Trestle `$top` max is 1000 (Bridge max is 200)
+   - Trestle pagination uses `$skip`; Bridge uses cursor (`$next`)
 
 ---
 
@@ -413,7 +417,7 @@ These numbers should inform default adjustment values and market narrative gener
 ## 10. Open Questions (Updated 2026-03-10)
 
 1. ~~What specific MLS?~~ **NTREIS** — confirmed on Trestle ✅
-2. ~~Will the Trestle account be under the broker's license or a tech provider account?~~ **Emailed broker to ask about direct NTREIS credentials** ✅
+2. ~~Will the Trestle account be under the broker's license or a tech provider account?~~ **Broker's office manager working with Board on IDX Vendor Authorization Form. Getting bounced between Board and NTREIS. NTREIS phone number is dead.** ⏳
 3. ~~What feed type was requested?~~ **IDX Plus selected on Trestle, but not activated yet ($500 setup). Waiting on broker response re: direct NTREIS access** ✅
 4. ~~Target demo area?~~ **All of North Texas, especially north through Gainesville** ✅
 5. Active listing analysis (absorption rate, competing inventory)? **TBD — decide after core CMA works**
