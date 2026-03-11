@@ -12,9 +12,12 @@
     "file://AGENTS.md",
     "file://.kiro/memory.md",
     "skill://~/.kiro/skills/dev-browser/SKILL.md",
-    "skill://~/.kiro/skills/mls/SKILL.md",
     "skill://~/.kiro/skills/pdf-report/SKILL.md",
-    "skill://~/.kiro/skills/cma/SKILL.md"
+    "skill://.kiro/skills/mls/SKILL.md",
+    "skill://.kiro/skills/cma/SKILL.md",
+    "skill://.kiro/skills/listing-writer/SKILL.md",
+    "skill://.kiro/skills/net-sheet/SKILL.md",
+    "skill://.kiro/skills/deadline-tracker/SKILL.md"
   ],
   "hooks": {
     "preToolUse": [
