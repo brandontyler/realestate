@@ -6,23 +6,9 @@ When the user says "look at ss" or references a screenshot, read the image from:
 
 ## MLS Data Access
 
-### Provider-Agnostic Design
-All MLS code MUST be provider-agnostic. Use env vars for base URL, auth method, dataset, and credentials. RESO Data Dictionary fields are the same across providers — only auth and endpoint URLs differ.
+All MLS code must be provider-agnostic. Use env vars for base URL, auth method, dataset, and credentials. RESO Data Dictionary fields are the same across providers — only auth and endpoint URLs differ.
 
-### Bridge Interactive (Active — Dev/Test)
-- Auth: Server token as query param `access_token` — NO OAuth, NO Bearer header
-- Endpoint: `GET {BRIDGE_API_URL}/OData/{dataset}/{Resource}?access_token={BRIDGE_API_TOKEN}&$top=N`
-- Datasets: `actris_ref` (real Austin MLS, 52k+), `test` (synthetic, 10k)
-- Use `actris_ref` for development (NOT `actris` — that 404s)
-
-### Trestle / NTREIS (Pending — Production)
-- Auth: OAuth2 client_credentials → Bearer token header
-- Token endpoint: `{base}/oidc/connect/token`
-- OData endpoint: `{base}/odata/{Resource}`
-- Waiting on broker for NTREIS IDX Vendor Authorization Form
-
-### Swapping Providers
-When NTREIS credentials arrive, only env vars change — no code changes needed if the MLS client is built correctly.
+Current provider details are in `.kiro/memory.md`. When NTREIS credentials arrive, only env vars change.
 
 ## Issue Tracking (Beads)
 
@@ -43,7 +29,7 @@ After clone/checkout: `br sync --import-only`. After git pull: `br sync --import
 
 ### Session Completion
 
-Work is NOT complete until `git push` succeeds. MANDATORY steps:
+Work is NOT complete until `git push` succeeds. Steps:
 
 1. File issues for remaining work
 2. Close finished beads, update in-progress items

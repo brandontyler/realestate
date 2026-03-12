@@ -9,9 +9,8 @@ Generate publish-ready MLS remarks, social media captions, and email blast copy 
 
 ## Workflow
 
-1. Pull property data using the MLS skill (address, structure, features, remarks, media)
-2. If not in MLS, ask the user for basics: address, beds, baths, sqft, year built, notable features
-3. Generate all outputs below
+1. Pull property data using the MLS skill (or ask user for basics if not in MLS)
+2. Generate all outputs below
 
 ## Outputs
 
@@ -19,37 +18,35 @@ Generate publish-ready MLS remarks, social media captions, and email blast copy 
 - **Short (≤500 chars):** For NTREIS and syndication. Every word earns its place.
 - **Full (500–1000 chars):** For agent websites and brochures.
 
-Lead with the strongest differentiator — not beds/baths/sqft (already in MLS fields). Be specific and concrete. No filler words ("nice," "great," "beautiful," "must see"). End with a soft CTA.
+Lead with the strongest differentiator — not beds/baths/sqft (already in MLS fields). Be specific and concrete. No filler ("nice," "great," "beautiful," "must see"). End with a soft CTA.
 
 ### Social Media Caption
-Under 300 chars before hashtags. Hook in the first line (pattern interrupt — question, bold claim, or punchy fragment). Separate Instagram (lifestyle) and Facebook (detail + link) versions. 3–5 hashtags.
+Under 300 chars before hashtags. Hook in the first line. Separate Instagram (lifestyle) and Facebook (detail + link) versions. 3–5 hashtags.
 
 ### Email Blast
-2–3 paragraphs, narrative style. Weave stats in naturally. Two subject line options (A/B: curiosity vs. feature-driven). End with CTA.
+2–3 paragraphs, narrative style. Two subject line options (A/B: curiosity vs. feature-driven). End with CTA.
 
 ### Tone (optional)
 User can request: luxury, investor, first-time-buyer, downsizer. Default: general.
 
-## Fair Housing Compliance (MANDATORY)
+## Fair Housing Compliance
 
-Describe the PROPERTY, never who should live there. Use "primary" not "master" for bedrooms/suites/baths. Don't reference protected classes (race, color, religion, national origin, sex, familial status, disability) directly or through implication.
+Describe the PROPERTY, never who should live there. Use "primary" not "master" for bedrooms/suites/baths.
 
-Non-obvious traps to avoid:
+Traps to avoid:
 - "walking distance to [house of worship]" — religious preference
-- "safe/quiet neighborhood" — implies other areas aren't, can be discriminatory
-- "exclusive" or "prestigious" — can imply exclusion
+- "safe/quiet neighborhood" — can be discriminatory
+- "exclusive" / "prestigious" — can imply exclusion
 - "no children" / "adults only" — familial status (unless verified 55+)
 
-Include at the bottom: *Fair Housing compliant. Describes property features only.*
+Include: *Fair Housing compliant. Describes property features only.*
 
-## North Texas Context (Production Market)
-
-Primary market is DFW via NTREIS. Things the model wouldn't know from MLS data alone:
+## North Texas Context
 
 - School districts are the #1 differentiator in Frisco, Prosper, Southlake, Allen, McKinney, Celina
-- Major employer corridor along 121/DNT: Toyota HQ (Plano), Charles Schwab (Westlake), Liberty Mutual, JPMorgan Chase — mention for relocation appeal
-- Known master-planned communities: Light Farms, Phillips Creek Ranch, Harvest, Windsong Ranch, Star Trail, Trinity Falls, Union Park
-- Local landmarks buyers reference: Legacy West, The Star, Grandscape, Stonebriar
-- Storm shelters/safe rooms are a genuine selling point (tornado alley)
+- Major employer corridor along 121/DNT: Toyota HQ, Schwab, Liberty Mutual, JPMorgan Chase
+- Known communities: Light Farms, Phillips Creek Ranch, Harvest, Windsong Ranch, Star Trail, Trinity Falls, Union Park
+- Landmarks: Legacy West, The Star, Grandscape, Stonebriar
+- Storm shelters/safe rooms are a genuine selling point
 - 0.3+ acre lots are premium in DFW master-planned communities (0.2 is standard)
 - DFW hashtags: #DFWRealEstate #NorthTexasHomes #FriscoTX #ProsperTX #PlanoTX etc.

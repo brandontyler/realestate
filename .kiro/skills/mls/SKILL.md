@@ -5,11 +5,10 @@ description: MLS real estate data access via RESO Web API. Use when users ask ab
 
 # MLS Data Access Skill
 
-Query real estate MLS data via the RESO Web API. The client lives at `/home/tylerbtt/code/personal/realestate/mls/` and supports Bridge Interactive (dev) and Trestle/NTREIS (production).
+Client lives at `/home/tylerbtt/code/personal/realestate/mls/`. Supports Bridge Interactive (dev) and Trestle/NTREIS (production).
 
 ## Quick Start
 
-All scripts must start with:
 ```python
 import sys; sys.path.insert(0, "/home/tylerbtt/code/personal/realestate")
 from dotenv import load_dotenv; load_dotenv("/home/tylerbtt/code/personal/realestate/.env")
@@ -22,22 +21,15 @@ client = create_client()
 ### Search by address
 ```python
 result = client.query("Property",
-    filter="UnparsedAddress eq '123 Main St, Austin TX 78701'",
+    filter="contains(UnparsedAddress, '123 Main')",
     select=["ListingKey","UnparsedAddress","ListPrice","StandardStatus",
             "BedroomsTotal","BathroomsTotalInteger","LivingArea","YearBuilt",
-            "LotSizeSquareFeet","GarageSpaces","Latitude","Longitude",
-            "SubdivisionName","PropertySubType","Media"],
+            "LotSizeSquareFeet","GarageSpaces","SubdivisionName","PropertySubType","Media"],
     top=5)
 ```
 
-For partial/fuzzy address matching, use `contains`:
+### Sold comps
 ```python
-filter="contains(UnparsedAddress, '123 Main')"
-```
-
-### Find sold comps near a property
-```python
-# By zip code
 result = client.query("Property",
     filter="StandardStatus eq 'Closed' and PostalCode eq '78734' "
            "and BedroomsTotal ge 3 and BedroomsTotal le 5 "
@@ -46,118 +38,65 @@ result = client.query("Property",
     select=["ListingKey","UnparsedAddress","ListPrice","CloseDate",
             "BedroomsTotal","BathroomsTotalInteger","LivingArea","YearBuilt",
             "LotSizeSquareFeet","GarageSpaces","PoolPrivateYN",
-            "Latitude","Longitude","SubdivisionName","PropertySubType"],
-    orderby="CloseDate desc",
-    top=50, count=True)
+            "SubdivisionName","PropertySubType"],
+    orderby="CloseDate desc", top=50, count=True)
 ```
 
-### Active competition
+### Active / Pending
 ```python
-result = client.query("Property",
-    filter="StandardStatus eq 'Active' and PostalCode eq '78734' "
-           "and BedroomsTotal ge 3 and BedroomsTotal le 5",
-    select=["ListingKey","UnparsedAddress","ListPrice","LivingArea",
-            "BedroomsTotal","BathroomsTotalInteger","OnMarketDate"],
-    top=50, count=True)
+# Active
+client.query("Property", filter="StandardStatus eq 'Active' and PostalCode eq '78734'", top=50, count=True)
+# Pending
+client.query("Property", filter="(StandardStatus eq 'Pending' or StandardStatus eq 'ActiveUnderContract') and PostalCode eq '78734'", top=50, count=True)
 ```
 
-### Pending/under contract
+### Single property / Pagination / Geo search
 ```python
-result = client.query("Property",
-    filter="(StandardStatus eq 'Pending' or StandardStatus eq 'ActiveUnderContract') "
-           "and PostalCode eq '78734'",
-    top=50, count=True)
-```
+prop = client.get_by_key("Property", "abc123def", select=[...])
 
-### Single property by key
-```python
-prop = client.get_by_key("Property", "abc123def",
-    select=["ListingKey","UnparsedAddress","ListPrice","Media"])
-```
-
-### Pagination
-```python
-result = client.query("Property", filter="...", top=200)
+# Pagination
 while "@odata.nextLink" in result:
     result = client.fetch_next(result["@odata.nextLink"])
-    # process result["value"]
+
+# Geo (Bridge only)
+client.query("Property", filter="geo.distance(Coordinates, POINT(-97.7431 30.2672)) le 2 and StandardStatus eq 'Closed'", top=50)
 ```
 
-### Geo search (Bridge only)
-```python
-# Properties within 2 miles of a point
-result = client.query("Property",
-    filter="geo.distance(Coordinates, POINT(-97.7431 30.2672)) le 2 "
-           "and StandardStatus eq 'Closed'",
-    top=50)
-```
+## Resources
 
-### Rate limit status
-```python
-print(client.rate_limiter.status())
-```
+Property, Member, Office, OpenHouse, Media
 
-## Available Resources
+## Key Fields
 
-| Resource | Description |
-|----------|-------------|
-| Property | Listings — active, closed, pending, withdrawn |
-| Member | Real estate agents |
-| Office | Brokerages |
-| OpenHouse | Open house events |
-| Media | Photos (on Bridge actris_ref, use `$select=Media` on Property instead) |
+**Identity:** ListingKey, ListingId, UnparsedAddress, City, PostalCode, SubdivisionName, CountyOrParish
 
-## Key Property Fields
+**Status:** StandardStatus (Active/ActiveUnderContract/Closed/Pending/Withdrawn/Expired), CloseDate, ListingContractDate
 
-**Identity:** ListingKey (unique), ListingId, UnparsedAddress, City, PostalCode, StateOrProvince, SubdivisionName, CountyOrParish
+**Pricing:** ListPrice, ClosePrice*, OriginalListPrice*
 
-**Location:** Use `geo.distance(Coordinates, POINT(lng lat))` for radius search on Bridge. No Latitude/Longitude fields on actris_ref.
+**Structure:** BedroomsTotal, BathroomsTotalInteger, BathroomsFull, BathroomsHalf, LivingArea, LotSizeSquareFeet, LotSizeAcres, YearBuilt, StoriesTotal, GarageSpaces, PoolPrivateYN, PropertyType, PropertySubType
 
-**Status:** StandardStatus (Active/ActiveUnderContract/Closed/Pending/Withdrawn/Expired), MlsStatus, CloseDate, OffMarketDate, ListingContractDate
+**Tax:** TaxAssessedValue, TaxLegalDescription
 
-**Pricing:** ListPrice, ClosePrice*, OriginalListPrice*, PreviousListPrice*
+**Media:** Use `$select=Media` (NOT `$expand=Media`). Array of {MediaURL, Order, MediaCategory, ShortDescription}.
 
-**Structure:** BedroomsTotal, BathroomsTotalInteger, BathroomsFull, BathroomsHalf, LivingArea, LotSizeSquareFeet, LotSizeAcres, YearBuilt, StoriesTotal, BuildingAreaTotal
+**Agent:** ListAgentFullName, ListOfficeName, BuyerAgentFullName, BuyerOfficeName
 
-**Features:** GarageSpaces, GarageYN, PoolPrivateYN, PropertyType, PropertySubType, ConstructionMaterials, Roof, Heating, Cooling, View, Flooring, InteriorFeatures
+*Fields marked * do NOT exist on Bridge actris_ref.
 
-**Market:** DaysOnMarket*, CumulativeDaysOnMarket*, ListingContractDate, PriceChangeTimestamp
+## Bridge actris_ref Quirks
 
-**Tax:** TaxAssessedValue, TaxLegalDescription (TaxAnnualAmount* missing on actris_ref)
-
-**Media:** Media (array of {MediaURL, Order, MediaCategory, ShortDescription}) — use `$select=Media`, NOT `$expand=Media`
-
-**Agent/Office:** ListAgentFullName, ListOfficeName, BuyerAgentFullName, BuyerOfficeName
-
-*Fields marked with * do NOT exist on Bridge actris_ref. They exist on Trestle/NTREIS.
+- Dataset: `actris_ref` (52k+ Austin TX listings). Rate limits: 5,000/hr, 334/min burst.
+- Missing: ClosePrice, DaysOnMarket, CumulativeDaysOnMarket, OriginalListPrice, PreviousListPrice, Latitude, Longitude, OnMarketDate, Stories, RoomsTotal, TaxAnnualAmount
+- Use `StoriesTotal` not `Stories`; `geo.distance(Coordinates, POINT(lng lat))` for location
+- `$select=Media` not `$expand=Media`; no `$orderby` inside `$expand`
 
 ## OData Filter Syntax
 
-```
-eq, ne, gt, ge, lt, le          — comparison
-and, or, not                     — logical
-contains(Field, 'value')         — substring match
-startswith(Field, 'value')       — prefix match
-Field eq null / Field ne null    — null checks
-```
+`eq, ne, gt, ge, lt, le` | `and, or, not` | `contains(Field, 'value')` | `startswith(Field, 'value')`
 
-Date literals are unquoted: `CloseDate ge 2025-01-01`
-String literals use single quotes: `City eq 'Austin'`
-Collections: `StandardStatus eq 'Active' or StandardStatus eq 'Closed'`
+Dates unquoted: `CloseDate ge 2025-01-01`. Strings single-quoted: `City eq 'Austin'`.
 
-## Current Provider: Bridge (ACTRIS Reference Server)
+## Approach
 
-- Dataset: actris_ref (52k+ Austin TX listings, real data)
-- Rate limits: 5,000/hr, 334/min burst
-- Quirks: No ClosePrice/DaysOnMarket fields; use `$select=Media` not `$expand=Media`; no `$orderby` inside `$expand`
-
-## Approach: Let the Model Think
-
-The MLS client is a data access tool. Do NOT build rigid comp selection algorithms, scoring formulas, or adjustment calculators in code. Instead:
-
-1. **Query the data** using the client
-2. **Reason about the results** — which comps are most relevant and why
-3. **Explain your reasoning** — the broker wants to understand the logic
-4. **Iterate** — if the first search is too narrow/wide, adjust and re-query
-
-The model's judgment about what makes a good comp is more valuable than any hardcoded formula.
+Query the data, reason about results, explain reasoning, iterate if search is too narrow/wide. The model's judgment about comp quality is more valuable than any formula.
